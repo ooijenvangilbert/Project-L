@@ -1,13 +1,5 @@
 # Project-L
 
-hardware items used :
-- Arduino nano rp2040 connect
-- rgb leds SK6812 
-- servos sg90 180 degrees
-- water pump 6v
-
-software platforms used :
-- Arduino IDE
-- Edge impulse
+please add assets here so they can be used in the readme.md in the main folder
 
 
