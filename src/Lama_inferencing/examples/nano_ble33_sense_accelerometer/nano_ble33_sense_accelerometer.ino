@@ -26,6 +26,7 @@
 
 /* Constant defines -------------------------------------------------------- */
 #define CONVERT_G_TO_MS2    9.80665f
+#define MAX_ACCEPTED_RANGE  2.0f        // starting 03/2022, models are generated setting range to +-2, but this example use Arudino library which set range to +-4g. If you are using an older model, ignore this value and use 4.0f instead
 
 /* Private variables ------------------------------------------------------- */
 static bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
@@ -71,6 +72,16 @@ void ei_printf(const char *format, ...) {
 }
 
 /**
+ * @brief Return the sign of the number
+ * 
+ * @param number 
+ * @return int 1 if positive (or 0) -1 if negative
+ */
+float ei_get_sign(float number) {
+    return (number >= 0.0) ? 1.0 : -1.0;
+}
+
+/**
 * @brief      Get data and run inferencing
 *
 * @param[in]  debug  Get debug info if true
@@ -91,6 +102,12 @@ void loop()
         uint64_t next_tick = micros() + (EI_CLASSIFIER_INTERVAL_MS * 1000);
 
         IMU.readAcceleration(buffer[ix], buffer[ix + 1], buffer[ix + 2]);
+
+        for (int i = 0; i < 3; i++) {
+            if (fabs(buffer[ix + i]) > MAX_ACCEPTED_RANGE) {
+                buffer[ix + i] = ei_get_sign(buffer[ix + i]) * MAX_ACCEPTED_RANGE;
+            }
+        }
 
         buffer[ix + 0] *= CONVERT_G_TO_MS2;
         buffer[ix + 1] *= CONVERT_G_TO_MS2;

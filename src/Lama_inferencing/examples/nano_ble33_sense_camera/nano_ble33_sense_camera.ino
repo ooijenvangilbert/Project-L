@@ -128,7 +128,6 @@ static bool debug_nn = false; // Set this to true to see e.g. features generated
 /* Function definitions ------------------------------------------------------- */
 bool ei_camera_init(void);
 void ei_camera_deinit(void);
-bool ei_camera_capture(uint32_t img_width, uint32_t img_height, uint8_t *buf);
 bool ei_camera_capture(uint32_t img_width, uint32_t img_height, uint8_t *out_buf) ;
 int calculate_resize_dimensions(uint32_t out_width, uint32_t out_height, uint32_t *resize_col_sz, uint32_t *resize_row_sz, bool *do_resize);
 void resizeImage(int srcWidth, int srcHeight, uint8_t *srcImage, int dstWidth, int dstHeight, uint8_t *dstImage, int iBpp);
@@ -216,12 +215,29 @@ void loop()
 
         // print the predictions
         ei_printf("Predictions (DSP: %d ms., Classification: %d ms., Anomaly: %d ms.): \n",
-                    result.timing.dsp, result.timing.classification, result.timing.anomaly);
+                  result.timing.dsp, result.timing.classification, result.timing.anomaly);
+#if EI_CLASSIFIER_OBJECT_DETECTION == 1
+        bool bb_found = result.bounding_boxes[0].value > 0;
+        for (size_t ix = 0; ix < EI_CLASSIFIER_OBJECT_DETECTION_COUNT; ix++) {
+            auto bb = result.bounding_boxes[ix];
+            if (bb.value == 0) {
+                continue;
+            }
+
+            ei_printf("    %s (%f) [ x: %u, y: %u, width: %u, height: %u ]\n", bb.label, bb.value, bb.x, bb.y, bb.width, bb.height);
+        }
+
+        if (!bb_found) {
+            ei_printf("    No objects found\n");
+        }
+#else
         for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-            ei_printf("    %s: \t%f\r\n", result.classification[ix].label, result.classification[ix].value);
+            ei_printf("    %s: %.5f\n", result.classification[ix].label,
+                                        result.classification[ix].value);
         }
 #if EI_CLASSIFIER_HAS_ANOMALY == 1
-            ei_printf("    anomaly score: %f\r\n", result.anomaly);
+        ei_printf("    anomaly score: %.3f\n", result.anomaly);
+#endif
 #endif
 
         while (ei_get_serial_available() > 0) {
