@@ -1,14 +1,14 @@
 # Project-L
 
 Hardware items used :
-- Arduino nano 33 ble sense
+- Arduino nano 33 ble sense https://docs.arduino.cc/hardware/nano-33-ble-sense
 - rgb leds SK6812 
 - servos sg90 180 degrees
 - water pump 6v
 
 Software platforms used :
-- Arduino IDE
-- Edge impulse
+- Arduino IDE	https://www.arduino.cc/en/software
+- Edge impulse 	https://www.edgeimpulse.com
 
 Libraries used :
 - Adafruit_neopixel for the rgb leds
