@@ -33,6 +33,22 @@
 /* Includes ---------------------------------------------------------------- */
 #include <PDM.h>
 #include <Lama_inferencing.h>
+#include <Adafruit_NeoPixel.h>
+#include <Servo.h>
+#include <Arduino_LSM9DS1.h> 
+
+#define DATA_PIN 12 // D12 on the nano ble 33 sense
+#define NUM_LEDS 3 
+
+#define leftServoPin 9
+#define rightServoPin 7
+
+#define spitPin 5
+
+Adafruit_NeoPixel pixels(NUM_LEDS, DATA_PIN, NEO_GRB + NEO_KHZ800);
+
+Servo leftServo;  
+Servo rightServo;
 
 /** Audio buffers, pointers and selectors */
 typedef struct {
@@ -54,6 +70,8 @@ static int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
  */
 void setup()
 {
+  pixels.begin();
+  pixels.show();
     // put your setup code here, to run once:
     Serial.begin(115200);
 
@@ -68,10 +86,85 @@ void setup()
                                             sizeof(ei_classifier_inferencing_categories[0]));
 
     run_classifier_init();
-    if (microphone_inference_start(EI_CLASSIFIER_SLICE_SIZE) == false) {
+    if (microphone_inference_start(EI_CLASSIFIER_SLICE_SIZE) == false) 
+    {
         ei_printf("ERR: Failed to setup audio sampling\r\n");
         return;
     }
+
+    if (!IMU.begin()) 
+    {
+      Serial.println("Failed to initialize IMU!");
+      while (1);
+    }
+
+    leftServo.attach(leftServoPin);  // attaches the servo on pin 9 to the servo object
+    rightServo.attach(rightServoPin);
+
+    // servo in rest
+    leftServo.write(45);
+    rightServo.write(45);
+
+    pinMode(5, OUTPUT);
+    
+    setLeds();
+}
+
+int brightness = 255;
+int mode =0;
+int spit =0;
+
+void setLeds()
+{
+  brightness = brightness-10;
+  if (brightness <= -10)
+  {
+    Serial.println("escaping");
+    leftServo.write(45);
+    rightServo.write(45);
+    return;
+  }
+  
+  if (brightness < 0)
+  {
+    brightness = 0;
+    spit=0;
+  }
+  
+  for (int i=0; i<NUM_LEDS; i++)
+  {
+    if (mode==1)
+    {
+      // teams
+      pixels.setPixelColor(i, 0,0,255); 
+      leftServo.write(0);
+      rightServo.write(90);
+    }
+    if (mode ==2)
+    {
+      // lama
+      leftServo.write(90);
+      rightServo.write(0);
+      spit++;
+      if (spit==2)
+      {
+        // 2nd time spit
+        // call spit method
+        Spit();
+        spit=0;  
+      }
+      pixels.setPixelColor(i, 255,0,0);
+    }
+  }
+  pixels.setBrightness(brightness);
+  pixels.show();  
+}
+
+void Spit()
+{
+  digitalWrite(spitPin, HIGH);
+  delay(150);
+  digitalWrite(spitPin, LOW);
 }
 
 /**
@@ -80,35 +173,67 @@ void setup()
 void loop()
 {
     bool m = microphone_inference_record();
-    if (!m) {
+    if (!m) 
+    {
         ei_printf("ERR: Failed to record audio...\n");
         return;
     }
+    float x, y, z;
 
+    if (IMU.accelerationAvailable()) 
+    {
+        IMU.readAcceleration(x, y, z);
+
+        
+        Serial.print(x);
+        Serial.print('\t');
+        Serial.print(y);
+        Serial.print('\t');
+        Serial.println(z);
+    }
+
+    
     signal_t signal;
     signal.total_length = EI_CLASSIFIER_SLICE_SIZE;
     signal.get_data = &microphone_audio_signal_get_data;
     ei_impulse_result_t result = {0};
 
     EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
-    if (r != EI_IMPULSE_OK) {
+    if (r != EI_IMPULSE_OK) 
+    {
         ei_printf("ERR: Failed to run classifier (%d)\n", r);
         return;
     }
 
-    if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) {
+    if (++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)) 
+    {
         // print the predictions
         ei_printf("Predictions ");
         ei_printf("(DSP: %d ms., Classification: %d ms., Anomaly: %d ms.)",
             result.timing.dsp, result.timing.classification, result.timing.anomaly);
         ei_printf(": \n");
-        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) {
-            ei_printf("    %s: %.5f\n", result.classification[ix].label,
-                      result.classification[ix].value);
+        for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
+        {
+            ei_printf("    %s: %.5f\n", result.classification[ix].label,result.classification[ix].value);
+            //mode=0;
+            if (ix == 0 && result.classification[ix].value>0.7)
+            {
+              // found lama
+              Serial.println("lama");
+              brightness=255;
+              mode=2;
+            }
+            
+            if (ix == 2 && result.classification[ix].value>0.7)
+            {
+              // found teams
+              Serial.println("teams");
+              brightness=255;
+              mode=1;
+            }
         }
-#if EI_CLASSIFIER_HAS_ANOMALY == 1
-        ei_printf("    anomaly score: %.3f\n", result.anomaly);
-#endif
+
+        setLeds();
 
         print_results = 0;
     }
@@ -119,7 +244,8 @@ void loop()
  *
  * @param[in]  format     Variable argument list
  */
-void ei_printf(const char *format, ...) {
+void ei_printf(const char *format, ...) 
+{
     static char print_buf[1024] = { 0 };
 
     va_list args;
@@ -127,7 +253,8 @@ void ei_printf(const char *format, ...) {
     int r = vsnprintf(print_buf, sizeof(print_buf), format, args);
     va_end(args);
 
-    if (r > 0) {
+    if (r > 0) 
+    {
         Serial.write(print_buf);
     }
 }
@@ -144,10 +271,12 @@ static void pdm_data_ready_inference_callback(void)
     int bytesRead = PDM.read((char *)&sampleBuffer[0], bytesAvailable);
 
     if (record_ready == true) {
-        for (int i = 0; i<bytesRead>> 1; i++) {
+        for (int i = 0; i<bytesRead>> 1; i++) 
+        {
             inference.buffers[inference.buf_select][inference.buf_count++] = sampleBuffer[i];
 
-            if (inference.buf_count >= inference.n_samples) {
+            if (inference.buf_count >= inference.n_samples) 
+            {
                 inference.buf_select ^= 1;
                 inference.buf_count = 0;
                 inference.buf_ready = 1;
@@ -167,20 +296,23 @@ static bool microphone_inference_start(uint32_t n_samples)
 {
     inference.buffers[0] = (signed short *)malloc(n_samples * sizeof(signed short));
 
-    if (inference.buffers[0] == NULL) {
+    if (inference.buffers[0] == NULL) 
+    {
         return false;
     }
 
     inference.buffers[1] = (signed short *)malloc(n_samples * sizeof(signed short));
 
-    if (inference.buffers[1] == NULL) {
+    if (inference.buffers[1] == NULL) 
+    {
         free(inference.buffers[0]);
         return false;
     }
 
     sampleBuffer = (signed short *)malloc((n_samples >> 1) * sizeof(signed short));
 
-    if (sampleBuffer == NULL) {
+    if (sampleBuffer == NULL) 
+    {
         free(inference.buffers[0]);
         free(inference.buffers[1]);
         return false;
@@ -199,7 +331,8 @@ static bool microphone_inference_start(uint32_t n_samples)
     // initialize PDM with:
     // - one channel (mono mode)
     // - a 16 kHz sample rate
-    if (!PDM.begin(1, EI_CLASSIFIER_FREQUENCY)) {
+    if (!PDM.begin(1, EI_CLASSIFIER_FREQUENCY)) 
+    {
         ei_printf("Failed to start PDM!");
     }
 
@@ -220,14 +353,15 @@ static bool microphone_inference_record(void)
 {
     bool ret = true;
 
-    if (inference.buf_ready == 1) {
+    if (inference.buf_ready == 1) 
+    {
         ei_printf(
-            "Error sample buffer overrun. Decrease the number of slices per model window "
-            "(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
+            "Error sample buffer overrun. Decrease the number of slices per model window (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)\n");
         ret = false;
     }
 
-    while (inference.buf_ready == 0) {
+    while (inference.buf_ready == 0) 
+    {
         delay(1);
     }
 
@@ -256,7 +390,3 @@ static void microphone_inference_end(void)
     free(inference.buffers[1]);
     free(sampleBuffer);
 }
-
-#if !defined(EI_CLASSIFIER_SENSOR) || EI_CLASSIFIER_SENSOR != EI_CLASSIFIER_SENSOR_MICROPHONE
-#error "Invalid model for current sensor."
-#endif
