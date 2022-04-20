@@ -152,7 +152,10 @@ void setLeds()
         // call spit method
         Spit();
         spit=0;  
+        //mode=0;
+        //brightness = 0;
       }
+      
       pixels.setPixelColor(i, 255,0,0);
     }
   }
@@ -180,11 +183,15 @@ void loop()
     }
     float x, y, z;
 
-    if (IMU.accelerationAvailable()) 
+    if (IMU.gyroscopeAvailable()) 
     {
-        IMU.readAcceleration(x, y, z);
+        IMU.readGyroscope(x, y, z);
 
-        
+        if (x > 10 || y > 10 || z>10)
+        {
+          brightness=255;
+          mode=2;
+        }
         Serial.print(x);
         Serial.print('\t');
         Serial.print(y);
@@ -209,9 +216,9 @@ void loop()
     {
         // print the predictions
         ei_printf("Predictions ");
-        ei_printf("(DSP: %d ms., Classification: %d ms., Anomaly: %d ms.)",
-            result.timing.dsp, result.timing.classification, result.timing.anomaly);
+        ei_printf("(DSP: %d ms., Classification: %d ms., Anomaly: %d ms.)", result.timing.dsp, result.timing.classification, result.timing.anomaly);
         ei_printf(": \n");
+        
         for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++) 
         {
             ei_printf("    %s: %.5f\n", result.classification[ix].label,result.classification[ix].value);
