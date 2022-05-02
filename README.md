@@ -24,4 +24,8 @@ Pins, use the GPIO number in the code:
 Modifications :
 - SJ1 should be closed to USB power can be utilized on VUSB
 
+Edge impulse project :
+- https://studio.edgeimpulse.com/public/86244/latest
+-
+
 
