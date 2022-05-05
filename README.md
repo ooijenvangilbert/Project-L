@@ -1,4 +1,4 @@
-# Project-L
+# Project-Lama
 
 A fun little project to make a spitting lama.
 The lama will listen to 'lama' and get annoyed. When it hears it again it will spit.
