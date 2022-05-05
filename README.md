@@ -1,7 +1,7 @@
 # Project-Lama
 
 A fun little project to make a spitting lama.
-The lama will listen to 'lama' and get annoyed. When it hears it again it will spit.
+The lama will listen to 'lama' and get annoyed. When it hears it again it will spit (pump).
 The lama will also listen to the teams sound and act allerted.
 
 Annoyed :
@@ -37,6 +37,10 @@ Modifications :
 
 Edge impulse project :
 - https://studio.edgeimpulse.com/public/86244/latest
--
+
+
+Installation :
+- the edge impule library should be imported in the Arduino IDE
+- the ino file will use the library for inference but contains changes to control the leds, servo's and pump
 
 
