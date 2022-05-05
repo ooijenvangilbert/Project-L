@@ -1,5 +1,16 @@
 # Project-L
 
+A fun little project to make a spitting lama.
+The lama will listen to 'lama' and get annoyed. When it hears it again it will spit.
+The lama will also listen to the teams sound and act allerted.
+
+Annoyed :
+- red eyes (leds) and ears (servos) back
+
+Allerted :
+- eyes blue (leds) and ears (servos) upright
+
+
 Hardware items used :
 - Arduino nano 33 ble sense https://docs.arduino.cc/hardware/nano-33-ble-sense
 - rgb leds SK6812 
