@@ -7,7 +7,7 @@ The lama will also listen to the teams sound and act allerted.
 Annoyed :
 - red eyes (leds) and ears (servos) back
 
-Allerted :
+Alerted :
 - eyes blue (leds) and ears (servos) upright
 
 
